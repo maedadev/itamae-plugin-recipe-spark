@@ -37,7 +37,7 @@ execute 'install hadoop aws jars' do
     cp -f share/hadoop/tools/lib/hadoop-aws-#{hadoop_version}.jar \
         /opt/spark/spark-#{version}-bin-hadoop2.7/jars/
   EOF
-  not_if "test `ls -1 /opt/spark/spark-#{version}-bin-hadoop2.7/jars/ | egrep '(hadoop-)?aws-.*' | wc -l` = 2"
+  not_if "test `ls -1 /opt/spark/spark-#{version}-bin-hadoop2.7/jars/ | egrep '(hadoop-)?aws-.*' | wc -l` = 4"
 end
 
 if ENV['AWS_ACCESS_KEY_ID'] and ENV['AWS_SECRET_ACCESS_KEY']
