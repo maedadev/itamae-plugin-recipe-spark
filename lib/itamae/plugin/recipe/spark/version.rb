@@ -7,7 +7,7 @@ module Itamae
         SPARK_VERSION = [
           SPARK_VERSION_MAJOR = '2',
           SPARK_VERSION_MINOR = '4',
-          SPARK_VERSION_REVISION = '5'
+          SPARK_VERSION_REVISION = '6'
         ].join('.')
 
       end
