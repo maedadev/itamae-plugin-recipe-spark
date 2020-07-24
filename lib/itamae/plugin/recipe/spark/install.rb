@@ -40,6 +40,8 @@ execute 'install hadoop aws jars' do
   not_if "test `ls -1 /opt/spark/spark-#{version}-bin-hadoop2.7/jars/ | egrep '(hadoop-)?aws-.*' | wc -l` = 4"
 end
 
+template "/opt/spark/spark-#{version}-bin-hadoop2.7/conf/spark-defaults.conf"
+
 if ENV['AWS_ACCESS_KEY_ID'] and ENV['AWS_SECRET_ACCESS_KEY']
   template "/opt/spark/spark-#{version}-bin-hadoop2.7/conf/hdfs-site.xml" do
     variables aws_access_key_id: ENV['AWS_ACCESS_KEY_ID'],

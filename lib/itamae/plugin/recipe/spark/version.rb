@@ -2,7 +2,7 @@ module Itamae
   module Plugin
     module Recipe
       module Spark
-        VERSION = "0.1.1"
+        VERSION = "0.1.2"
         
         SPARK_VERSION = [
           SPARK_VERSION_MAJOR = '2',
