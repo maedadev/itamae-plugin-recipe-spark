@@ -1,0 +1,1 @@
+13098490936c9931beda3acc4c30cdc5ca707acd1415eebde1030b11903934fe  spark-2.4.7-bin-hadoop2.7.tgz
