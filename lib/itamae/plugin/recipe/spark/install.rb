@@ -31,7 +31,7 @@ execute "download spark-redshift-#{spark_redshift_version} and dependencies" do
     wget -q https://s3.amazonaws.com/redshift-downloads/drivers/jdbc/#{redshift_jdbc_version}/RedshiftJDBC42-#{redshift_jdbc_version}.jar -O RedshiftJDBC42-#{redshift_jdbc_version}.jar
     wget -q https://repo1.maven.org/maven2/net/java/dev/jets3t/jets3t/#{jets3t_version}/jets3t-#{jets3t_version}.jar -O jets3t-#{jets3t_version}.jar
   EOF
-  not_if "echo #{::File.read(::File.join(::File.dirname(__FILE__), "spark-redshift_#{spark_redshift_version}_sha256.txt")).strip} | sha256sum -c "
+  not_if "sha256sum -c #{File.join(File.dirname(__FILE__), "spark-redshift_#{spark_redshift_version}_sha256.txt")}"
 end
 
 directory '/opt/spark' do
