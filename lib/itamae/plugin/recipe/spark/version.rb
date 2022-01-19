@@ -6,8 +6,8 @@ module Itamae
 
         SPARK_VERSION = [
           SPARK_VERSION_MAJOR = '3',
-          SPARK_VERSION_MINOR = '0',
-          SPARK_VERSION_REVISION = '1'
+          SPARK_VERSION_MINOR = '1',
+          SPARK_VERSION_REVISION = '2'
         ].join('.')
 
         SPARK_REDSHIFT_VERSION = '2.12-5.0.3'
