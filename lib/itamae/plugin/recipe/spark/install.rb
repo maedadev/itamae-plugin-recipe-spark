@@ -77,7 +77,7 @@ execute 'install aws java sdk jar' do
   cwd '/tmp'
   command <<-EOF
     cp -f aws-java-sdk-*/lib/aws-java-sdk-*.jar \
-        /opt/spark/spark-3.3.2-bin-hadoop3/jars/
+        /opt/spark/spark-#{version}-bin-hadoop#{hadoop_type}/jars/
   EOF
   not_if "test -e /opt/spark/spark-#{version}-bin-hadoop#{hadoop_type}/jars/aws-java-sdk-*.jar"
 end
