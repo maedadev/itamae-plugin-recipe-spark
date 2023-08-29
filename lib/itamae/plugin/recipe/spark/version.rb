@@ -14,6 +14,7 @@ module Itamae
         SPARK_AVRO_VERSION = '2.12-3.0.1'
         MINIMAL_JSON_VERSION = '0.9.4'
         REDSHIFT_JDBC_VERSION = '2.1.0.17'
+        FASTDOUBLEPARSER_VERSION = '0.8.0'
         JETS3T_VERSION = '0.9.4'
       end
     end
