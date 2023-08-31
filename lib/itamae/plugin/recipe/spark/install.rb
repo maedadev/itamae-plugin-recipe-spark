@@ -84,6 +84,15 @@ execute 'install aws java sdk jar' do
   not_if "test -e /opt/spark/spark-#{version}-bin-hadoop#{hadoop_type}/jars/aws-java-sdk-*.jar"
 end
 
+execute 'install hadoop aws jar' do
+  cwd '/opt/hadoop/current'
+  command <<-EOF
+    cp -f share/hadoop/tools/lib/hadoop-aws-#{hadoop_version}.jar \
+        /opt/spark/spark-#{version}-bin-hadoop#{hadoop_type}/jars/
+  EOF
+  not_if "test -e /opt/spark/spark-#{version}-bin-hadoop#{hadoop_type}/jars/hadoop-aws-*.jar"
+end
+
 execute 'install spark-redshift jars' do
   cwd "/opt/spark/spark-#{version}-bin-hadoop#{hadoop_type}"
   command <<-EOF
