@@ -2,12 +2,12 @@ module Itamae
   module Plugin
     module Recipe
       module Spark
-        VERSION = "0.1.8"
+        VERSION = "0.1.9"
 
         SPARK_VERSION = [
           SPARK_VERSION_MAJOR = '3',
-          SPARK_VERSION_MINOR = '3',
-          SPARK_VERSION_REVISION = '2'
+          SPARK_VERSION_MINOR = '4',
+          SPARK_VERSION_REVISION = '1'
         ].join('.')
 
         SPARK_REDSHIFT_VERSION = '2.12-5.0.3'
