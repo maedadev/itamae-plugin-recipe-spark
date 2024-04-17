@@ -34,7 +34,7 @@ execute "download spark-redshift-#{spark_redshift_version} and dependencies" do
     wget -q https://repo1.maven.org/maven2/com/amazon/redshift/redshift-jdbc42/#{redshift_jdbc_version}/redshift-jdbc42-#{redshift_jdbc_version}.jar -O RedshiftJDBC42-#{redshift_jdbc_version}.jar
   EOF
 
-  case spark_redshift_version.split('-', 2).first
+  case spark_redshift_version.split('-', 2).last
   when '5.0.3'
     command <<-EOF
       wget -q https://repo1.maven.org/maven2/com/eclipsesource/minimal-json/minimal-json/#{minimal_json_version}/minimal-json-#{minimal_json_version}.jar -O minimal-json-#{minimal_json_version}.jar
@@ -119,7 +119,7 @@ execute 'install spark-redshift jars' do
         jars/
   EOF
 
-  case spark_redshift_version.split('-', 2).first
+  case spark_redshift_version.split('-', 2).last
   when '5.0.3'
     command <<-EOF
       ls -d $(find jars) | grep 'minimal-json-[0-9.]*.jar' | xargs rm -f
