@@ -19,22 +19,34 @@ execute "download spark-#{version}" do
   not_if "test -e /opt/spark/spark-#{version}-bin-hadoop#{hadoop_type}/INSTALLED || echo #{::File.read(::File.join(::File.dirname(__FILE__), "spark-#{version}_hadoop_#{hadoop_type}_sha256.txt")).strip} | sha256sum -c"
 end
 
-spark_redshift_version = Itamae::Plugin::Recipe::Spark::SPARK_REDSHIFT_VERSION
-spark_avro_version = Itamae::Plugin::Recipe::Spark::SPARK_AVRO_VERSION
+spark_redshift_version = ENV['SPARK_REDSHIFT_VERSION'] || Itamae::Plugin::Recipe::Spark::SPARK_REDSHIFT_VERSION
+spark_avro_version = ENV['SPARK_AVRO_VERSION'] || Itamae::Plugin::Recipe::Spark::SPARK_AVRO_VERSION
 minimal_json_version = Itamae::Plugin::Recipe::Spark::MINIMAL_JSON_VERSION
-redshift_jdbc_version = Itamae::Plugin::Recipe::Spark::REDSHIFT_JDBC_VERSION
+redshift_jdbc_version = ENV['REDSHIFT_JDBC_VERSION'] || Itamae::Plugin::Recipe::Spark::REDSHIFT_JDBC_VERSION
 fastdoubleparser_version = Itamae::Plugin::Recipe::Spark::FASTDOUBLEPARSER_VERSION
 jets3t_version = Itamae::Plugin::Recipe::Spark::JETS3T_VERSION
+aws_secretsmanager_jdbc_version = Itamae::Plugin::Recipe::Spark::AWS_SECRETSMANAGER_JDBC_VERSION
 execute "download spark-redshift-#{spark_redshift_version} and dependencies" do
   cwd '/tmp'
   command <<-EOF
-    wget -q https://repo1.maven.org/maven2/io/github/spark-redshift-community/spark-redshift_#{spark_redshift_version.split('-').first}/#{spark_redshift_version.split('-').last}/spark-redshift_#{spark_redshift_version}.jar -O spark-redshift_#{spark_redshift_version}.jar
+    wget -q https://repo1.maven.org/maven2/io/github/spark-redshift-community/spark-redshift_#{spark_redshift_version.split('-', 2).first}/#{spark_redshift_version.split('-', 2).last}/spark-redshift_#{spark_redshift_version}.jar -O spark-redshift_#{spark_redshift_version}.jar
     wget -q https://repo1.maven.org/maven2/org/apache/spark/spark-avro_#{spark_avro_version.split('-').first}/#{spark_avro_version.split('-').last}/spark-avro_#{spark_avro_version}.jar -O spark-avro_#{spark_avro_version}.jar
-    wget -q https://repo1.maven.org/maven2/com/eclipsesource/minimal-json/minimal-json/#{minimal_json_version}/minimal-json-#{minimal_json_version}.jar -O minimal-json-#{minimal_json_version}.jar
-    wget -q https://s3.amazonaws.com/redshift-downloads/drivers/jdbc/#{redshift_jdbc_version}/redshift-jdbc42-#{redshift_jdbc_version}.jar -O RedshiftJDBC42-#{redshift_jdbc_version}.jar
-    wget -q https://repo1.maven.org/maven2/ch/randelshofer/fastdoubleparser/#{fastdoubleparser_version}/fastdoubleparser-#{fastdoubleparser_version}.jar -O fastdoubleparser-#{fastdoubleparser_version}.jar
-    wget -q https://repo1.maven.org/maven2/net/java/dev/jets3t/jets3t/#{jets3t_version}/jets3t-#{jets3t_version}.jar -O jets3t-#{jets3t_version}.jar
+    wget -q https://repo1.maven.org/maven2/com/amazon/redshift/redshift-jdbc42/#{redshift_jdbc_version}/redshift-jdbc42-#{redshift_jdbc_version}.jar -O RedshiftJDBC42-#{redshift_jdbc_version}.jar
   EOF
+
+  case spark_redshift_version.split('-', 2).last
+  when '5.0.3'
+    command <<-EOF
+      wget -q https://repo1.maven.org/maven2/com/eclipsesource/minimal-json/minimal-json/#{minimal_json_version}/minimal-json-#{minimal_json_version}.jar -O minimal-json-#{minimal_json_version}.jar
+      wget -q https://repo1.maven.org/maven2/ch/randelshofer/fastdoubleparser/#{fastdoubleparser_version}/fastdoubleparser-#{fastdoubleparser_version}.jar -O fastdoubleparser-#{fastdoubleparser_version}.jar
+      wget -q https://repo1.maven.org/maven2/net/java/dev/jets3t/jets3t/#{jets3t_version}/jets3t-#{jets3t_version}.jar -O jets3t-#{jets3t_version}.jar
+    EOF
+  when '6.2.0-spark_3.4'
+    command <<-EOF  
+      wget -q https://repo1.maven.org/maven2/com/amazonaws/secretsmanager/aws-secretsmanager-jdbc/#{aws_secretsmanager_jdbc_version}/aws-secretsmanager-jdbc-#{aws_secretsmanager_jdbc_version}.jar -O aws-secretsmanager-jdbc-#{aws_secretsmanager_jdbc_version}.jar
+    EOF
+  end
+
   not_if "sha256sum -c #{File.join(File.dirname(__FILE__), "spark-redshift_#{spark_redshift_version}_sha256.txt")}"
 end
 
@@ -102,19 +114,31 @@ execute 'install spark-redshift jars' do
     ls -d $(find jars) | grep 'spark-avro_[0-9.-]*.jar' | xargs rm -f
     cp -f /tmp/spark-avro_#{spark_avro_version}.jar \
         jars/
-    ls -d $(find jars) | grep 'minimal-json-[0-9.]*.jar' | xargs rm -f
-    cp -f /tmp/minimal-json-#{minimal_json_version}.jar \
-        jars/
     ls -d $(find jars) | grep 'RedshiftJDBC42-[0-9.]*.jar' | xargs rm -f
     cp -f /tmp/RedshiftJDBC42-#{redshift_jdbc_version}.jar \
         jars/
-    ls -d $(find jars) | grep 'fastdoubleparser-[0-9.]*.jar' | xargs rm -f
-    cp -f /tmp/fastdoubleparser-#{fastdoubleparser_version}.jar \
-        jars/
-    ls -d $(find jars) | grep 'jets3t-[0-9.]*.jar' | xargs rm -f
-    cp -f /tmp/jets3t-#{jets3t_version}.jar \
-        jars/
   EOF
+
+  case spark_redshift_version.split('-', 2).last
+  when '5.0.3'
+    command <<-EOF
+      ls -d $(find jars) | grep 'minimal-json-[0-9.]*.jar' | xargs rm -f
+      cp -f /tmp/minimal-json-#{minimal_json_version}.jar \
+          jars/
+      ls -d $(find jars) | grep 'fastdoubleparser-[0-9.]*.jar' | xargs rm -f
+      cp -f /tmp/fastdoubleparser-#{fastdoubleparser_version}.jar \
+          jars/
+      ls -d $(find jars) | grep 'jets3t-[0-9.]*.jar' | xargs rm -f
+      cp -f /tmp/jets3t-#{jets3t_version}.jar \
+          jars/
+    EOF
+  when '6.2.0-spark_3.4'
+    command <<-EOF
+      ls -d $(find jars) | grep 'aws-secretsmanager-jdbc-[0-9.]*.jar' | xargs rm -f
+      cp -f /tmp/aws-secretsmanager-jdbc-#{aws_secretsmanager_jdbc_version}.jar \
+          jars/
+    EOF
+  end
 end
 
 template "/opt/spark/spark-#{version}-bin-hadoop#{hadoop_type}/conf/spark-defaults.conf"
