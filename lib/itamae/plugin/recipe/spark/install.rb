@@ -1,6 +1,6 @@
 version = ENV['SPARK_VERSION'] || Itamae::Plugin::Recipe::Spark::SPARK_VERSION
 hadoop_version = ENV['HADOOP_VERSION'] || Itamae::Plugin::Recipe::Hadoop::HADOOP_VERSION
-hadoop_type = if Gem::Version.create(hadoop_version) == Gem::Version.create('3.3.3')
+hadoop_type = if Gem::Version.create(hadoop_version) >= Gem::Version.create('3.3.3')
                 '3'
               elsif Gem::Version.create(hadoop_version) >= Gem::Version.create('3.2')
                 '3.2'
@@ -25,6 +25,7 @@ minimal_json_version = Itamae::Plugin::Recipe::Spark::MINIMAL_JSON_VERSION
 redshift_jdbc_version = ENV['REDSHIFT_JDBC_VERSION'] || Itamae::Plugin::Recipe::Spark::REDSHIFT_JDBC_VERSION
 fastdoubleparser_version = Itamae::Plugin::Recipe::Spark::FASTDOUBLEPARSER_VERSION
 jets3t_version = Itamae::Plugin::Recipe::Spark::JETS3T_VERSION
+aws_secretsmanager_caching_java_version = Itamae::Plugin::Recipe::Spark::AWS_SECRETSMANAGER_CACHING_JAVA_VERSION
 aws_secretsmanager_jdbc_version = Itamae::Plugin::Recipe::Spark::AWS_SECRETSMANAGER_JDBC_VERSION
 execute "download spark-redshift-#{spark_redshift_version} and dependencies" do
   cwd '/tmp'
@@ -40,6 +41,11 @@ execute "download spark-redshift-#{spark_redshift_version} and dependencies" do
         EOS
       elsif spark_redshift_version.split('-', 2).last == '6.2.0-spark_3.4'
         <<-EOS
+          wget -q https://repo1.maven.org/maven2/com/amazonaws/secretsmanager/aws-secretsmanager-jdbc/#{aws_secretsmanager_jdbc_version}/aws-secretsmanager-jdbc-#{aws_secretsmanager_jdbc_version}.jar -O aws-secretsmanager-jdbc-#{aws_secretsmanager_jdbc_version}.jar
+        EOS
+      elsif spark_redshift_version.split('-', 2).last == '6.4.3-spark_3.5'
+        <<-EOS
+          wget -q https://repo1.maven.org/maven2/com/amazonaws/secretsmanager/aws-secretsmanager-caching-java/#{aws_secretsmanager_caching_java_version}/aws-secretsmanager-caching-java-#{aws_secretsmanager_caching_java_version}.jar -O aws-secretsmanager-caching-java-#{aws_secretsmanager_caching_java_version}.jar
           wget -q https://repo1.maven.org/maven2/com/amazonaws/secretsmanager/aws-secretsmanager-jdbc/#{aws_secretsmanager_jdbc_version}/aws-secretsmanager-jdbc-#{aws_secretsmanager_jdbc_version}.jar -O aws-secretsmanager-jdbc-#{aws_secretsmanager_jdbc_version}.jar
         EOS
       end}
@@ -128,6 +134,14 @@ execute 'install spark-redshift jars' do
         EOS
       elsif spark_redshift_version.split('-', 2).last == '6.2.0-spark_3.4'
         <<-EOS
+          ls -d $(find jars) | grep 'aws-secretsmanager-jdbc-[0-9.]*.jar' | xargs rm -f
+          cp -f /tmp/aws-secretsmanager-jdbc-#{aws_secretsmanager_jdbc_version}.jar jars/
+        EOS
+      elsif spark_redshift_version.split('-', 2).last == '6.4.3-spark_3.5'
+        <<-EOS
+          ls -d $(find jars) | grep 'aws-secretsmanager-caching-java-[0-9.]*.jar' | xargs rm -f
+          cp -f /tmp/aws-secretsmanager-caching-java-#{aws_secretsmanager_caching_java_version}.jar jars/
+
           ls -d $(find jars) | grep 'aws-secretsmanager-jdbc-[0-9.]*.jar' | xargs rm -f
           cp -f /tmp/aws-secretsmanager-jdbc-#{aws_secretsmanager_jdbc_version}.jar jars/
         EOS
