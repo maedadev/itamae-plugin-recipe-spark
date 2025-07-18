@@ -18,6 +18,9 @@ module Itamae
         JETS3T_VERSION = '0.9.4'
         AWS_SECRETSMANAGER_CACHING_JAVA_VERSION = '1.0.2'
         AWS_SECRETSMANAGER_JDBC_VERSION = '1.0.12'
+
+        AWS_SDK_V2_VERSION = '2.31.78'
+        REACTIVE_STREAMS_VERSION = '1.0.4'
       end
     end
   end

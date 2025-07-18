@@ -62,6 +62,62 @@ execute 'download aws-java-sdk' do
   not_if 'test -e /tmp/aws-java-sdk.zip'
 end
 
+
+aws_sdk_v2_version = ENV['AWS_SDK_V2_VERSION'] || Itamae::Plugin::Recipe::Spark::AWS_SDK_V2_VERSION
+aws_sdk_v2_jars = %w[
+  apache-client
+  arns
+  auth
+  aws-core
+  aws-query-protocol
+  aws-xml-protocol
+  checksums
+  checksums-spi
+  endpoints-spi
+  http-auth
+  http-auth-aws
+  http-auth-spi
+  http-client-spi
+  identity-spi
+  json-utils
+  metrics-spi
+  profiles
+  protocol-core
+  regions
+  retries
+  retries-spi
+  s3
+  s3-transfer-manager
+  sdk-core
+  third-party-jackson-core
+  utils
+]
+reactive_streams_version = Itamae::Plugin::Recipe::Spark::REACTIVE_STREAMS_VERSION
+if spark_redshift_version.split('-', 2).last == '6.4.3-spark_3.5'
+  directory '/tmp/aws_java_sdk_v2' do
+    action :create
+  end
+
+  aws_sdk_v2_jars.each do |jar|
+    execute "download aws java sdk v2 #{jar} jar" do
+      cwd '/tmp/aws_java_sdk_v2'
+      command <<-EOF
+        wget -q https://repo1.maven.org/maven2/software/amazon/awssdk/#{jar}/#{aws_sdk_v2_version}/#{jar}-#{aws_sdk_v2_version}.jar
+      EOF
+      not_if "test -e /tmp/aws_java_sdk_v2/#{jar}-#{aws_sdk_v2_version}.jar"
+    end
+  end
+
+  execute "download reactive_streams jar" do
+    cwd '/tmp/aws_java_sdk_v2'
+    command <<-EOF
+      wget -q https://repo1.maven.org/maven2/org/reactivestreams/reactive-streams/#{reactive_streams_version}/reactive-streams-#{reactive_streams_version}.jar
+    EOF
+    not_if "test -e /tmp/aws_java_sdk_v2/reactive-streams-#{reactive_streams_version}.jar"
+  end
+end
+
+
 execute 'unzip aws-java-sdk' do
   cwd '/tmp'
   command <<-EOF
@@ -100,6 +156,28 @@ execute 'install aws java sdk jar' do
   not_if "test -e /opt/spark/spark-#{version}-bin-hadoop#{hadoop_type}/jars/aws-java-sdk-*.jar"
 end
 
+if spark_redshift_version.split('-', 2).last == '6.4.3-spark_3.5'
+  aws_sdk_v2_jars.each do |jar|
+    execute "install aws java sdk v2 #{jar} jar" do
+      cwd '/tmp/aws_java_sdk_v2'
+      command <<-EOF
+        cp -f #{jar}-#{aws_sdk_v2_version}.jar \
+            /opt/spark/spark-#{version}-bin-hadoop#{hadoop_type}/jars/
+      EOF
+      not_if "test -e /opt/spark/spark-#{version}-bin-hadoop#{hadoop_type}/jars/#{jar}-#{aws_sdk_v2_version}.jar"
+    end
+  end
+
+  execute "install reactive_streams jar" do
+    cwd '/tmp/aws_java_sdk_v2'
+    command <<-EOF
+      cp -f reactive-streams-#{reactive_streams_version}.jar \
+          /opt/spark/spark-#{version}-bin-hadoop#{hadoop_type}/jars/
+    EOF
+    not_if "test -e /opt/spark/spark-#{version}-bin-hadoop#{hadoop_type}/jars/reactive-streams-#{reactive_streams_version}.jar"
+  end
+end
+
 execute 'install hadoop aws jar' do
   cwd '/opt/hadoop/current'
   command <<-EOF
@@ -107,6 +185,36 @@ execute 'install hadoop aws jar' do
         /opt/spark/spark-#{version}-bin-hadoop#{hadoop_type}/jars/
   EOF
   not_if "test -e /opt/spark/spark-#{version}-bin-hadoop#{hadoop_type}/jars/hadoop-aws-*.jar"
+end
+
+if spark_redshift_version.split('-', 2).last == '6.4.3-spark_3.5'
+  source = '/opt/hadoop/current/share/hadoop/client'
+  destination = "/opt/spark/spark-#{version}-bin-hadoop#{hadoop_type}/jars"
+  jar_name = "hadoop-client-api-#{hadoop_version}.jar"
+  
+  execute "remove old hadoop client api jars" do
+    cwd "/opt/spark/spark-#{version}-bin-hadoop#{hadoop_type}/jars"
+    command <<-EOF
+      for file in hadoop-client-api-*.jar; do
+        if [[ -e $file ]]; then
+          file_version=${file#hadoop-client-api-}
+          file_version=${file_version%.jar}
+          if [[ "$(printf '%s\n%s' "#{hadoop_version}" "${file_version}" | sort -V | head -n1)" != "#{hadoop_version}" ]]; then
+            rm -f $file
+          fi
+        fi
+      done
+    EOF
+    only_if "ls /opt/spark/spark-#{version}-bin-hadoop#{hadoop_type}/jars/hadoop-client-api-*.jar"
+  end
+  
+  execute "install hadoop client api jar" do
+    cwd source
+    command <<-EOF
+      cp -f #{jar_name} #{destination}
+    EOF
+    not_if "test -e #{destination}/#{jar_name}"
+  end
 end
 
 execute 'install spark-redshift jars' do
