@@ -1,6 +1,6 @@
 version = ENV['SPARK_VERSION'] || Itamae::Plugin::Recipe::Spark::SPARK_VERSION
 hadoop_version = ENV['HADOOP_VERSION'] || Itamae::Plugin::Recipe::Hadoop::HADOOP_VERSION
-hadoop_type = if Gem::Version.create(hadoop_version) == Gem::Version.create('3.3.3')
+hadoop_type = if Gem::Version.create(hadoop_version) >= Gem::Version.create('3.3.3')
                 '3'
               elsif Gem::Version.create(hadoop_version) >= Gem::Version.create('3.2')
                 '3.2'
@@ -25,6 +25,7 @@ minimal_json_version = Itamae::Plugin::Recipe::Spark::MINIMAL_JSON_VERSION
 redshift_jdbc_version = ENV['REDSHIFT_JDBC_VERSION'] || Itamae::Plugin::Recipe::Spark::REDSHIFT_JDBC_VERSION
 fastdoubleparser_version = Itamae::Plugin::Recipe::Spark::FASTDOUBLEPARSER_VERSION
 jets3t_version = Itamae::Plugin::Recipe::Spark::JETS3T_VERSION
+aws_secretsmanager_caching_java_version = Itamae::Plugin::Recipe::Spark::AWS_SECRETSMANAGER_CACHING_JAVA_VERSION
 aws_secretsmanager_jdbc_version = Itamae::Plugin::Recipe::Spark::AWS_SECRETSMANAGER_JDBC_VERSION
 execute "download spark-redshift-#{spark_redshift_version} and dependencies" do
   cwd '/tmp'
@@ -42,6 +43,11 @@ execute "download spark-redshift-#{spark_redshift_version} and dependencies" do
         <<-EOS
           wget -q https://repo1.maven.org/maven2/com/amazonaws/secretsmanager/aws-secretsmanager-jdbc/#{aws_secretsmanager_jdbc_version}/aws-secretsmanager-jdbc-#{aws_secretsmanager_jdbc_version}.jar -O aws-secretsmanager-jdbc-#{aws_secretsmanager_jdbc_version}.jar
         EOS
+      elsif spark_redshift_version.split('-', 2).last == '6.4.3-spark_3.5'
+        <<-EOS
+          wget -q https://repo1.maven.org/maven2/com/amazonaws/secretsmanager/aws-secretsmanager-caching-java/#{aws_secretsmanager_caching_java_version}/aws-secretsmanager-caching-java-#{aws_secretsmanager_caching_java_version}.jar -O aws-secretsmanager-caching-java-#{aws_secretsmanager_caching_java_version}.jar
+          wget -q https://repo1.maven.org/maven2/com/amazonaws/secretsmanager/aws-secretsmanager-jdbc/#{aws_secretsmanager_jdbc_version}/aws-secretsmanager-jdbc-#{aws_secretsmanager_jdbc_version}.jar -O aws-secretsmanager-jdbc-#{aws_secretsmanager_jdbc_version}.jar
+        EOS
       end}
   EOF
   
@@ -55,6 +61,62 @@ execute 'download aws-java-sdk' do
   EOF
   not_if 'test -e /tmp/aws-java-sdk.zip'
 end
+
+
+aws_sdk_v2_version = ENV['AWS_SDK_V2_VERSION'] || Itamae::Plugin::Recipe::Spark::AWS_SDK_V2_VERSION
+aws_sdk_v2_jars = %w[
+  apache-client
+  arns
+  auth
+  aws-core
+  aws-query-protocol
+  aws-xml-protocol
+  checksums
+  checksums-spi
+  endpoints-spi
+  http-auth
+  http-auth-aws
+  http-auth-spi
+  http-client-spi
+  identity-spi
+  json-utils
+  metrics-spi
+  profiles
+  protocol-core
+  regions
+  retries
+  retries-spi
+  s3
+  s3-transfer-manager
+  sdk-core
+  third-party-jackson-core
+  utils
+]
+reactive_streams_version = Itamae::Plugin::Recipe::Spark::REACTIVE_STREAMS_VERSION
+if spark_redshift_version.split('-', 2).last == '6.4.3-spark_3.5'
+  directory '/tmp/aws_java_sdk_v2' do
+    action :create
+  end
+
+  aws_sdk_v2_jars.each do |jar|
+    execute "download aws java sdk v2 #{jar} jar" do
+      cwd '/tmp/aws_java_sdk_v2'
+      command <<-EOF
+        wget -q https://repo1.maven.org/maven2/software/amazon/awssdk/#{jar}/#{aws_sdk_v2_version}/#{jar}-#{aws_sdk_v2_version}.jar
+      EOF
+      not_if "test -e /tmp/aws_java_sdk_v2/#{jar}-#{aws_sdk_v2_version}.jar"
+    end
+  end
+
+  execute "download reactive_streams jar" do
+    cwd '/tmp/aws_java_sdk_v2'
+    command <<-EOF
+      wget -q https://repo1.maven.org/maven2/org/reactivestreams/reactive-streams/#{reactive_streams_version}/reactive-streams-#{reactive_streams_version}.jar
+    EOF
+    not_if "test -e /tmp/aws_java_sdk_v2/reactive-streams-#{reactive_streams_version}.jar"
+  end
+end
+
 
 execute 'unzip aws-java-sdk' do
   cwd '/tmp'
@@ -94,6 +156,28 @@ execute 'install aws java sdk jar' do
   not_if "test -e /opt/spark/spark-#{version}-bin-hadoop#{hadoop_type}/jars/aws-java-sdk-*.jar"
 end
 
+if spark_redshift_version.split('-', 2).last == '6.4.3-spark_3.5'
+  aws_sdk_v2_jars.each do |jar|
+    execute "install aws java sdk v2 #{jar} jar" do
+      cwd '/tmp/aws_java_sdk_v2'
+      command <<-EOF
+        cp -f #{jar}-#{aws_sdk_v2_version}.jar \
+            /opt/spark/spark-#{version}-bin-hadoop#{hadoop_type}/jars/
+      EOF
+      not_if "test -e /opt/spark/spark-#{version}-bin-hadoop#{hadoop_type}/jars/#{jar}-#{aws_sdk_v2_version}.jar"
+    end
+  end
+
+  execute "install reactive_streams jar" do
+    cwd '/tmp/aws_java_sdk_v2'
+    command <<-EOF
+      cp -f reactive-streams-#{reactive_streams_version}.jar \
+          /opt/spark/spark-#{version}-bin-hadoop#{hadoop_type}/jars/
+    EOF
+    not_if "test -e /opt/spark/spark-#{version}-bin-hadoop#{hadoop_type}/jars/reactive-streams-#{reactive_streams_version}.jar"
+  end
+end
+
 execute 'install hadoop aws jar' do
   cwd '/opt/hadoop/current'
   command <<-EOF
@@ -101,6 +185,36 @@ execute 'install hadoop aws jar' do
         /opt/spark/spark-#{version}-bin-hadoop#{hadoop_type}/jars/
   EOF
   not_if "test -e /opt/spark/spark-#{version}-bin-hadoop#{hadoop_type}/jars/hadoop-aws-*.jar"
+end
+
+if spark_redshift_version.split('-', 2).last == '6.4.3-spark_3.5'
+  source = '/opt/hadoop/current/share/hadoop/client'
+  destination = "/opt/spark/spark-#{version}-bin-hadoop#{hadoop_type}/jars"
+  jar_name = "hadoop-client-api-#{hadoop_version}.jar"
+  
+  execute "remove old hadoop client api jars" do
+    cwd "/opt/spark/spark-#{version}-bin-hadoop#{hadoop_type}/jars"
+    command <<-EOF
+      for file in hadoop-client-api-*.jar; do
+        if [[ -e $file ]]; then
+          file_version=${file#hadoop-client-api-}
+          file_version=${file_version%.jar}
+          if [[ "$(printf '%s\n%s' "#{hadoop_version}" "${file_version}" | sort -V | head -n1)" != "#{hadoop_version}" ]]; then
+            rm -f $file
+          fi
+        fi
+      done
+    EOF
+    only_if "ls /opt/spark/spark-#{version}-bin-hadoop#{hadoop_type}/jars/hadoop-client-api-*.jar"
+  end
+  
+  execute "install hadoop client api jar" do
+    cwd source
+    command <<-EOF
+      cp -f #{jar_name} #{destination}
+    EOF
+    not_if "test -e #{destination}/#{jar_name}"
+  end
 end
 
 execute 'install spark-redshift jars' do
@@ -128,6 +242,14 @@ execute 'install spark-redshift jars' do
         EOS
       elsif spark_redshift_version.split('-', 2).last == '6.2.0-spark_3.4'
         <<-EOS
+          ls -d $(find jars) | grep 'aws-secretsmanager-jdbc-[0-9.]*.jar' | xargs rm -f
+          cp -f /tmp/aws-secretsmanager-jdbc-#{aws_secretsmanager_jdbc_version}.jar jars/
+        EOS
+      elsif spark_redshift_version.split('-', 2).last == '6.4.3-spark_3.5'
+        <<-EOS
+          ls -d $(find jars) | grep 'aws-secretsmanager-caching-java-[0-9.]*.jar' | xargs rm -f
+          cp -f /tmp/aws-secretsmanager-caching-java-#{aws_secretsmanager_caching_java_version}.jar jars/
+
           ls -d $(find jars) | grep 'aws-secretsmanager-jdbc-[0-9.]*.jar' | xargs rm -f
           cp -f /tmp/aws-secretsmanager-jdbc-#{aws_secretsmanager_jdbc_version}.jar jars/
         EOS

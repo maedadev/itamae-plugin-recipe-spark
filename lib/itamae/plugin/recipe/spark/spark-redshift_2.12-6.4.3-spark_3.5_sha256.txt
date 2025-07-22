@@ -1,0 +1,5 @@
+43d428ca25610fd3e7800c6d2270d1f27eacb6af1936c5e0641ad5d82abc65b9  spark-redshift_2.12-6.4.3-spark_3.5.jar
+16815c7ae6e68eb8f097c3987737689a20fb9cd8718f1c6cce72b76008a94d06  spark-avro_2.12-3.5.5.jar
+b30825a09c05293a79c8839bfef172901a9dcb7a46ec19559409d0e6eb7b5299  RedshiftJDBC42-2.1.0.29.jar
+efa849f894b83fbef1f2c27c72b8e4a581051f106338f94bd027810fc646ae85  aws-secretsmanager-caching-java-1.0.2.jar
+b90f9d51b6f34918cfdcbb100a486937fbc94eadd60862f2d2574716babe80bd  aws-secretsmanager-jdbc-1.0.12.jar
